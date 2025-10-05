@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pesquisa de Cartas</title>
+    <style>
+        .header {
+            background-color: #5B3774;
+            width: 100%;
+            height: 80px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 2;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding-left: 20px;
+        }
+
+        .header-logo {
+            max-height: 50px;
+            margin-right: 20px;
+            position: relative;
+            z-index: 4;
+            transition: transform 0.3s ease;
+        }
+
+        .header-logo:hover {
+            transform: scale(1.2);
+        }
+
+
+        .header-button {
+            width: 100;
+            height: 75;
+            background-color: transparent;
+            border: none;
+            margin: 0 5px;
+            cursor: pointer;
+            background-repeat: no-repeat;
+            background-size: cover;
+        }
+
+        .header-button.search {
+            position: relative;
+            background-image: url('cartasbotaoCLICK.png');
+            width: 125px;
+            height: 30px;
+        }
+
+        .header-button.search::after {
+            content: "";
+            position: absolute;
+            top: -25px;
+            left: -10px;
+            right: -10px;
+            bottom: -25px;
+            background-color: #ca9cec;
+            border-radius: 5px;
+            z-index: -1;
+        }
+
+        .header-button.decks {
+            background-image: url('decksbotao.png');
+        }
+
+
+        .header-button.deck-builder {
+            background-image: url("deckbuilder.png");
+            width: 200px;
+            height: 30px;
+        }
+
+
+        .header-button.articles {
+            background-image: url('artigos.png');
+        }
+
+        .centered-content {
+            margin-top: 100px;
+            text-align: center;
+        }
+
+        .search-buttons {
+            display: flex;
+            justify-content: center;
+            margin-top: 20px;
+        }
+
+        .search-button {
+            background-color: #8a69a1;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            margin: 0 10px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .rectangle {
+            background-color: #5B3774;
+            width: 100%;
+            height: 50px;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            z-index: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-family: Arial;
+        }
+
+        body {
+            background: linear-gradient(to bottom, #251232, #3f2651);
+            min-height: 100%;
+            margin: 0;
+            padding: 0;
+            background-attachment: fixed;
+        }
+
+        .header-button.decks:hover {
+            filter: brightness(140%);
+            transition: transform 0.3s ease;
+            transform: scale(1.15);
+        }
+
+        .header-button.search:hover {}
+
+        .header-button.deck-builder:hover {
+            filter: brightness(140%);
+            transition: transform 0.3s ease;
+            transform: scale(1.15);
+        }
+
+        .header-button.articles:hover {
+            filter: brightness(140%);
+            transition: transform 0.3s ease;
+            transform: scale(1.15);
+        }
+    </style>
+
+
+    <style>
+        /* ESTILO AQUI TOME CUIDADO PRA NAO MUDAR CAIO */
+        body {
+            font-family: Arial, sans-serif;
+        }
+
+        #name {
+            width: 400px;
+            height: 30px;
+        }
+
+        #results {
+            margin-top: 20px;
+        }
+
+        .card {
+            border: 1px solid #ccc;
+            padding: 10px;
+            margin-bottom: 10px;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            position: relative;
+        }
+
+        .card img {
+            max-width: 100px;
+            max-height: 150px;
+            margin-right: 10px;
+            transition: transform 0.3s ease-in-out;
+            cursor: pointer;
+            /* Zhael quem fez isso aqui ele muda o cursor pra uma mao */
+        }
+
+        .card {
+            border: none;
+            padding: 0;
+            display: inline-block;
+            width: calc((100% - 80px) / 5);
+
+            max-width: 200px;
+            max-height: 300px;
+            margin: 20px;
+        }
+
+        .card img {
+            border-radius: 5%;
+            margin: 0;
+            max-width: 100%;
+            max-height: 100%;
+            transition: transform 0.1s ease-in-out;
+            cursor: pointer;
+        }
+
+        .card:hover img {
+            filter: brightness(110%);
+            transform: scale(1.25);
+        }
+
+        .larger-image {
+            position: static;
+            padding: 0;
+            display: none;
+            top: auto;
+            left: auto;
+            max-width: 100%;
+            max-height: 100%;
+        }
+
+        .card:hover .larger-image {
+            display: none;
+        }
+
+        .card-info {
+            flex: 1;
+        }
+
+        .color-btn {
+            margin: 0 5px;
+            width: 50px;
+            height: 50px;
+            border: none;
+            background-repeat: no-repeat;
+            background-size: contain;
+            background-color: #251232;
+            cursor: pointer;
+
+
+        }
+
+        .color-btn.clicked {
+            filter: brightness(30%);
+        }
+
+        .header-button {
+            width: 125px;
+            height: 30px;
+            background-color: transparent;
+            background-size: cover;
+            border: none;
+            margin: 0 5px;
+            cursor: pointer;
+        }
+    </style>
+
+
+    <style>
+        .conteudo-centralizado {
+            margin-top: 50px;
+            text-align: center;
+        }
+
+        .search-buttons {
+            display: flex;
+            justify-content: center;
+            margin-top: 20px;
+        }
+
+        .color-btn {
+            margin: 0 5px;
+        }
+
+        #pagination {
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        #pagination button {
+            margin: 0 5px;
+        }
+    </style>
+
+
+</head>
+
+<body>
+    <div class="header">
+        <a href="index.html">
+            <img class="header-logo" src="logo2.png" alt="SurveilTAP Logo">
+        </a>
+        <a href="paginaprocura.html"><button class="header-button search"></button></a>
+        <a href="paginadecks.html"><button class="header-button decks"></button></a>
+        <a href="pagDECKBUILDER.html"><button class="header-button deck-builder"> </button></a>
+        <a href="artg.html" class="header-button">
+            <img src="artigos.png" alt="" class="header-button articles">
+        </a>
+    </div>
+
+    <div class="centered-content">
+        <div class="search-buttons">
+        </div>
+
+</body>
+
+<style>
+    .color-btn:nth-child(1) {
+        background-image: url('bW.png');
+    }
+
+    .color-btn:nth-child(2) {
+        background-image: url('bU.png');
+    }
+
+    .color-btn:nth-child(3) {
+        background-image: url('bB.png');
+    }
+
+    .color-btn:nth-child(4) {
+        background-image: url('bR.png');
+    }
+
+    .color-btn:nth-child(5) {
+        background-image: url('bG.png');
+    }
+
+    .color-btn:nth-child(6) {
+        background-image: url('bC.png');
+    }
+</style>
+
+<body>
+
+    <h1 style="color: white;">Pesquisa de Cartas</h1>
+    <div>
+        <label for="name" style="color: white;">Nome:</label>
+        <input type="text" id="name">
+        <div>
+            <label for="text" style="color: white;">Texto:</label>
+            <input type="text" id="words">
+            <label for="type" style="color: white;">Tipo:</label>
+            <select name="tipo" id="type">
+                <option value="---">---</option>
+                <option value="creature">Criatura</option>
+                <option value="sorcery">Feitiçaria</option>
+                <option value="spell">Instantânea</option>
+                <option value="enchantment">Encantamento</option>
+                <option value="artifact">Artefato</option>
+                <option value="land">Terreno</option>
+            </select>
+            <label for="subtype" style="color: white;">Subtipo:</label>
+            <select name="subtipo" id="subtype">
+                <option value="---">---</option>
+                <optgroup label="Criaturas">
+                    <option value="human">Humano</option>
+                    <option value="elf">Elfo</option>
+                    <option value="dwarf">Anão</option>
+                    <option value="goblin">Goblin</option>
+                    <option value="rat">Rato</option>
+                    <option value="spider">Aranha</option>
+                    <option value="dragon">Dragão</option>
+                    <option value="merfolk">Merfolk</option>
+                    <option value="doctor">Doutor</option>
+                    <option value="vampire">Vampiro</option>
+                    <option value="praetor">Petroriano</option>
+                <optgroup label="Terrenos">
+                    <option value="mountain">Montanha</option>
+                    <option value="plains">Planice</option>
+                    <option value="swamp">Pântano</option>
+                    <option value="island">Ilha</option>
+                    <option value="forest">Floresta</option>
+            </select>
+
+
+            <div style="display: inline-block;">
+                <button onclick="pesquisarCartas()"
+                    style="background-color: #8a69a1; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer;">Pesquisar</button>
+            </div>
+        </div>
+
+        <div>
+            <input type="radio" id="only" name="colorOption" value="only" checked>
+            <label for="only" style="color: white;">Apenas</label>
+
+            <input type="radio" id="and" name="colorOption" value="and">
+            <label for="and" style="color: white;">E</label>
+
+            <input type="radio" id="not" name="colorOption" value="not">
+            <label for="not" style="color: white;">Não</label>
+        </div>
+
+        </div>
+
+    <div>
+        <button class="color-btn" onclick="alterarCor('W', event)"></button>
+        <button class="color-btn" onclick="alterarCor('U', event)"></button>
+        <button class="color-btn" onclick="alterarCor('B', event)"></button>
+        <button class="color-btn" onclick="alterarCor('R', event)"></button>
+        <button class="color-btn" onclick="alterarCor('G', event)"></button>
+        <button class="color-btn" onclick="alterarCor('', event)"></button>
+    </div>
+
+    <div id="results"></div>
+
+    <div id="pagination">
+        <button onclick="paginaAnterior()">Anterior</button>
+        <span id="paginaAtual">1</span>
+        <button onclick="proximaPagina()">Próxima</button>
+    </div>
+
+    <script>
+        var coresSelecionadas = [];
+        var paginaAtual = 1;
+        var cartasPorPagina = 10;
+
+        function alterarCor(cor, evento) {
+            var indice = coresSelecionadas.indexOf(cor);
+            if (indice === -1) {
+                coresSelecionadas.push(cor);
+                evento.target.classList.add('clicked');
+            } else {
+                coresSelecionadas.splice(indice, 1);
+                evento.target.classList.remove('clicked');
+            }
+        }
+
+        function paginaAnterior() {
+            if (paginaAtual > 1) {
+                paginaAtual--;
+                pesquisarCartas();
+            }
+        }
+
+        function proximaPagina() {
+            paginaAtual++;
+            pesquisarCartas();
+        }
+
+        function pesquisarCartas() {
+            var nome = document.getElementById('name').value.trim();
+            var words = document.getElementById('words').value.trim();
+            var cores = coresSelecionadas;
+            var type = document.getElementById("type").value;
+            var subtype = document.getElementById("subtype").value;
+            var opcao = document.querySelector('input[name="colorOption"]:checked').value;
+
+            var apiUrl = 'https://api.scryfall.com/cards/search?q=';
+            let queryParts = [];
+
+            if (nome !== '') {
+                queryParts.push(`name:"${encodeURIComponent(nome)}"`);
+                queryParts.push('lang:en,pt');
+            }
+
+            if (type !== '---') {
+                queryParts.push(`type:${type}`);
+            }
+
+            if (subtype !== '---') {
+                queryParts.push(`type:${subtype}`);
+            }
+
+            if (words !== '') {
+                let textWords = words.split(' ');
+                for (const word of textWords) {
+                    queryParts.push(`o:"${word}"`);
+                }
+            }
+
+            if (cores.length > 0) {
+                if (opcao === 'only') {
+                    queryParts.push(`color:"${cores.join('')}"`);
+                } else if (opcao === 'and') {
+                    queryParts.push(`color>=${cores.join('')}`);
+                } else if (opcao === 'not') {
+                    queryParts.push(`-color:${cores.join('')}`);
+                }
+            }
+
+            apiUrl += queryParts.join('+');
+            apiUrl += `&page=${paginaAtual}&per_page=${cartasPorPagina}`;
+
+            document.getElementById('results').innerHTML = '';
+
+            fetch(apiUrl)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.object === "error") {
+                        document.getElementById('results').innerHTML = '<p style="text-align: center; color: white;">Nenhuma carta encontrada. Tente termos de pesquisa diferentes.</p>';
+                        return;
+                    }
+
+                    data.data.forEach(card => {
+                        var divCarta = document.createElement('div');
+                        divCarta.classList.add('card');
+
+                        var imagem = document.createElement('img');
+                        if (card.image_uris && card.image_uris.normal) {
+                            imagem.src = card.image_uris.normal;
+                        } else if (card.card_faces && card.card_faces.length > 0) {
+                            imagem.src = card.card_faces[0].image_uris.normal;
+                        }
+
+                        imagem.addEventListener('click', function () {
+                            const urlInfoCarta = 'cartainfo.html?name=' + encodeURIComponent(card.name) +
+                                '&artist=' + encodeURIComponent(card.artist) +
+                                '&effect=' + encodeURIComponent(card.oracle_text ? card.oracle_text : "Sem efeito disponível") +
+                                '&cores=' + encodeURIComponent(card.colors.join(',')) +
+                                '&imageURL=' + encodeURIComponent(card.image_uris ? card.image_uris.large : card.card_faces[0].image_uris.large);
+                            window.location.href = urlInfoCarta;
+                        });
+
+                        divCarta.appendChild(imagem);
+                        document.getElementById('results').appendChild(divCarta);
+                    });
+
+                    document.getElementById('paginaAtual').innerText = paginaAtual;
+                })
+                .catch(error => {
+                    console.error('Erro:', error);
+                    document.getElementById('results').innerHTML = '<p style="text-align: center; color: white;">Ocorreu um erro ao buscar os dados. Verifique sua conexão.</p>';
+                });
+        }
+
+        document.getElementById('searchButton').addEventListener('click', pesquisarCartas);
+    </script>
+</body>
+</html>
