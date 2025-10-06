@@ -4,6 +4,10 @@ from tkinter import messagebox
 from PIL import Image, ImageTk
 from io import BytesIO
 import webbrowser
+from urllib.parse import quote
+import re
+import json
+
 
 # pega as taxas de conversão (dolar e euro para reais)
 def pegar_taxas():
@@ -18,7 +22,80 @@ def pegar_taxas():
         print("Erro ao buscar taxas:", e)
         return {"USD": None, "EUR": None}
 
+
 taxas = pegar_taxas()
+
+
+from selenium import webdriver
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.common.exceptions import TimeoutException
+from webdriver_manager.chrome import ChromeDriverManager
+import re
+
+def pegar_preco_ligamagic(nome_carta_url):
+    """ISSO SEMPRE VAI RODAR EM SEGUNDO PLANO TOME CUIDADO PQ LAGA DEMAIS A GENTE TEM QUE POR NO WEB BROWSER"""
+    options = webdriver.ChromeOptions()
+    options.add_argument("--headless=new")
+    options.add_argument("--no-sandbox")
+    options.add_argument("--disable-gpu")
+    options.add_argument("--disable-dev-shm-usage")
+    options.add_argument("--window-size=1200,1000")
+    options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                         "AppleWebKit/537.36 (KHTML, like Gecko) "
+                         "Chrome/115.0 Safari/537.36")
+
+    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
+
+    try:
+        url = f"https://www.ligamagic.com.br/?view=cards/card&card={nome_carta_url}"
+        driver.get(url)
+
+
+        wait = WebDriverWait(driver, 10)
+        try:
+
+            elems = wait.until(
+                EC.presence_of_all_elements_located(
+                    (By.CSS_SELECTOR, ".bl-price.price-absolute-right")
+                )
+            )
+        except TimeoutException:
+            elems = driver.find_elements(By.XPATH, "//*[contains(text(), 'R$')]")
+
+        price_texts = []
+        for el in elems:
+            txt = el.text.strip()
+            m = re.search(r'R\$\s*[\d\.,]+', txt)
+            if m:
+                price_texts.append(m.group(0))
+
+        if not price_texts:
+            return "Não encontrado"
+
+
+        def parse_price(txt):
+            s = txt.replace("R$", "").replace(".", "").replace(",", ".").strip()
+            try:
+                return float(s)
+            except:
+                return None
+
+        parsed = [(txt, parse_price(txt)) for txt in price_texts if parse_price(txt)]
+        if not parsed:
+            return "Não encontrado"
+
+        menor = min(parsed, key=lambda x: x[1])[1]
+        return f"R$ {menor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+    except Exception as e:
+        print("Erro Ligamagic:", e)
+        return "Erro"
+    finally:
+        driver.quit()
+
+
 
 
 class ElementoVisual:
@@ -27,6 +104,7 @@ class ElementoVisual:
 
     def exibir(self, parent):
         raise NotImplementedError("Erro (subclasses devem implementar exibir)")
+
 
 class Carta(ElementoVisual):
     def __init__(self, nome, tipo, descricao, imagem_url, links_compra, precos):
@@ -82,16 +160,21 @@ class Carta(ElementoVisual):
             brl = f" (R$ {usd_foil_valor * taxas['USD']:.2f})" if taxas["USD"] else ""
             precos_txt += f"- USD Foil: ${usd_foil}{brl}\n"
         else:
-            precos_txt += "- USD Foil: Not available\n"
+            precos_txt += "- USD Foil: Não tem\n"
 
         if eur:
             eur_valor = float(eur)
             brl = f" (R$ {eur_valor * taxas['EUR']:.2f})" if taxas["EUR"] else ""
             precos_txt += f"- EUR: €{eur}{brl}\n"
         else:
-            precos_txt += "- EUR: Not available\n"
+            precos_txt += "- EUR: Não tem\n"
 
-        precos_txt += f"- MTGO Tix: {tix if tix else 'Not available'}\n"
+        precos_txt += f"- MTGO Tix: {tix if tix else 'Não tem'}\n"
+
+      #ligamagic aqui preço
+        nome_carta_url = quote(self.nome)
+        preco_liga = pegar_preco_ligamagic(nome_carta_url)
+        precos_txt += f"\n- Ligamagic (Menor Preço): {preco_liga}\n"
 
         tk.Label(janela_detalhes, text=precos_txt, justify="left", fg="darkgreen").pack(padx=10, pady=5)
 
@@ -104,8 +187,18 @@ class Carta(ElementoVisual):
                     command=lambda url=url: abrir_link(url)
                 ).pack(anchor="w", padx=5, pady=2)
 
+        nome_carta_url = quote(self.nome)
+        url_ligamagic = f"https://www.ligamagic.com.br/?view=cards/card&card={nome_carta_url}"
+        tk.Button(
+            janela_detalhes, text="Buscar na Ligamagic",
+            fg="blue", cursor="hand2",
+            command=lambda: abrir_link(url_ligamagic)
+        ).pack(anchor="w", padx=5, pady=2)
+
+
 def abrir_link(url):
     webbrowser.open(url)
+
 
 def buscar_cartas(direcao_pagina=0):
     global pagina_atual
@@ -167,6 +260,7 @@ def buscar_cartas(direcao_pagina=0):
         messagebox.showerror("Erro", str(e))
         pagina_atual -= direcao_pagina
 
+
 # config da interface N MUDE WALTER DA ULTIMA VEZ DEU PROBLEMA
 janela_principal = tk.Tk()
 janela_principal.title("Busca de Cartas Scryfall")
@@ -179,7 +273,9 @@ entrada_nome_carta.grid(row=0, column=1, padx=5, pady=5)
 tk.Label(janela_principal, text="Filtro de Cor:").grid(row=1, column=0, sticky="w", padx=10)
 cor_selecionada = tk.StringVar(value="nenhum")
 for i, cor in enumerate(["nenhum", "vermelho", "azul", "branco", "verde", "preto"]):
-    tk.Radiobutton(janela_principal, text=cor.capitalize(), variable=cor_selecionada, value=cor).grid(row=1, column=1+i, sticky="w")
+    tk.Radiobutton(janela_principal, text=cor.capitalize(), variable=cor_selecionada, value=cor).grid(row=1,
+                                                                                                      column=1 + i,
+                                                                                                      sticky="w")
 
 tk.Label(janela_principal, text="Cartas por Página:").grid(row=2, column=0, sticky="w", padx=10)
 entrada_cartas_por_pagina = tk.Entry(janela_principal, width=5)
@@ -190,9 +286,11 @@ pagina_atual = 1
 frame_paginacao = tk.Frame(janela_principal)
 frame_paginacao.grid(row=3, column=0, columnspan=6)
 
-tk.Button(frame_paginacao, text="Página Anterior", command=lambda: buscar_cartas(-1)).grid(row=0, column=0, padx=5, pady=5)
+tk.Button(frame_paginacao, text="Página Anterior", command=lambda: buscar_cartas(-1)).grid(row=0, column=0, padx=5,
+                                                                                           pady=5)
 tk.Button(frame_paginacao, text="Buscar", command=lambda: buscar_cartas(0)).grid(row=0, column=1, padx=5, pady=5)
-tk.Button(frame_paginacao, text="Próxima Página", command=lambda: buscar_cartas(1)).grid(row=0, column=2, padx=5, pady=5)
+tk.Button(frame_paginacao, text="Próxima Página", command=lambda: buscar_cartas(1)).grid(row=0, column=2, padx=5,
+                                                                                         pady=5)
 
 canvas = tk.Canvas(janela_principal, width=1000, height=600)
 scroll_y = tk.Scrollbar(janela_principal, orient="vertical", command=canvas.yview)
@@ -204,6 +302,8 @@ frame_imagens = tk.Frame(canvas)
 canvas.create_window((0, 0), window=frame_imagens, anchor="nw")
 frame_imagens.bind("<Configure>", lambda event: canvas.configure(scrollregion=canvas.bbox("all")))
 
-canvas.bind_all("<MouseWheel>", lambda event: canvas.yview_scroll(int(-1*(event.delta/120)), "units"))
+canvas.bind_all("<MouseWheel>", lambda event: canvas.yview_scroll(int(-1 * (event.delta / 120)), "units"))
 
 janela_principal.mainloop()
+
+
